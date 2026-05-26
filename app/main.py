@@ -2,6 +2,9 @@ from typing import Optional
 from fastapi import FastAPI , HTTPException , status , Response  
 from pydantic import BaseModel
 from random import randrange
+import psycopg2
+from psycopg2.extras import RealDictCursor
+import time 
 
 app = FastAPI()
 
@@ -9,7 +12,16 @@ class Post(BaseModel):
     title: str
     content: str
     published: bool = True
-    rating: Optional[int] = None 
+    rating: Optional[int] = None
+while True:
+    try:
+        cursor = conn.cursor()
+        print("Database Connection was successful")
+        break
+    except Exception as error:
+            print("Connection to database failed")
+            print("Error:", error)
+            time.sleep(2)
 
 my_posts = [{"title": "movies to watch", "content": "dhurandhar", "id":1 },
             {"title":"favourite food","content":"i love pizza", "id": 2}]
@@ -30,7 +42,9 @@ async def root():
 
 @app.get("/posts")
 def get_posts():
-    return {"data": my_posts}
+    cursor.execute(""" SELECT * FROM posts """)
+    posts = cursor.fetchall()
+    return {"data": posts}
 
 @app.post("/posts", status_code=status.HTTP_201_CREATED)
 def create_posts(new_post: Post):
@@ -63,7 +77,7 @@ def update_post(id: int, post: Post):
     if index == None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, 
                             detail=f"post with id: {id} was not found")
-    
+          
     post_dict = post.model_dump()
     post_dict['id'] = id
     my_posts[index] = post_dict
